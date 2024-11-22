@@ -226,6 +226,18 @@ void ethosu_inference_end(struct ethosu_driver *drv, void *user_arg);
  */
 uint64_t ethosu_address_remap(uint64_t address, int index);
 
+/**
+ * Select configuration for region access.
+ *
+ * Default implementation uses NPU_QCONFIG and NPU_REGIONCFG_n defines.
+ *
+ * @param address   Address of region.
+ * @param index     -1 command stream, 0-n base address index
+ *
+ * @return Configuration to use
+ */
+unsigned int ethosu_config_select(uint64_t address, int index);
+
 /******************************************************************************
  * Prototypes
  ******************************************************************************/

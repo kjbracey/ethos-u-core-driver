@@ -67,6 +67,25 @@ uint64_t __attribute__((weak)) ethosu_address_remap(uint64_t address, int index)
     return address;
 }
 
+unsigned int __attribute__((weak)) ethosu_config_select(uint64_t address, int index)
+{
+    (void)(address);
+    assert(index >= -1 && index <= 7);
+    switch (index)
+    {
+    case -1: return NPU_QCONFIG; break;
+    default:
+    case 0: return NPU_REGIONCFG_0; break;
+    case 1: return NPU_REGIONCFG_1; break;
+    case 2: return NPU_REGIONCFG_2; break;
+    case 3: return NPU_REGIONCFG_3; break;
+    case 4: return NPU_REGIONCFG_4; break;
+    case 5: return NPU_REGIONCFG_5; break;
+    case 6: return NPU_REGIONCFG_6; break;
+    case 7: return NPU_REGIONCFG_7; break;
+    }
+}
+
 struct ethosu_device *ethosu_dev_init(void *const base_address, uint32_t secure_enable, uint32_t privilege_enable)
 {
     struct ethosu_device *dev = malloc(sizeof(struct ethosu_device));
@@ -110,23 +129,10 @@ void ethosu_dev_deinit(struct ethosu_device *dev)
 
 enum ethosu_error_codes ethosu_dev_axi_init(struct ethosu_device *dev)
 {
-    struct regioncfg_r rcfg = {0};
-    struct axi_limit0_r l0  = {0};
-    struct axi_limit1_r l1  = {0};
-    struct axi_limit2_r l2  = {0};
-    struct axi_limit3_r l3  = {0};
-
-    dev->reg->QCONFIG.word = NPU_QCONFIG;
-
-    rcfg.region0             = NPU_REGIONCFG_0;
-    rcfg.region1             = NPU_REGIONCFG_1;
-    rcfg.region2             = NPU_REGIONCFG_2;
-    rcfg.region3             = NPU_REGIONCFG_3;
-    rcfg.region4             = NPU_REGIONCFG_4;
-    rcfg.region5             = NPU_REGIONCFG_5;
-    rcfg.region6             = NPU_REGIONCFG_6;
-    rcfg.region7             = NPU_REGIONCFG_7;
-    dev->reg->REGIONCFG.word = rcfg.word;
+    struct axi_limit0_r l0 = {0};
+    struct axi_limit1_r l1 = {0};
+    struct axi_limit2_r l2 = {0};
+    struct axi_limit3_r l3 = {0};
 
     l0.max_beats                = AXI_LIMIT0_MAX_BEATS_BYTES;
     l0.memtype                  = AXI_LIMIT0_MEM_TYPE;
@@ -165,6 +171,7 @@ void ethosu_dev_run_command_stream(struct ethosu_device *dev,
     assert(num_base_addr <= NPU_REG_BASEP_ARRLEN);
 
     struct cmd_r cmd;
+    struct regioncfg_r rcfg = {0};
     uint64_t qbase = ethosu_address_remap((uintptr_t)cmd_stream_ptr, -1);
     assert(qbase <= ADDRESS_MASK);
     LOG_DEBUG("QBASE=0x%016llx, QSIZE=%" PRIu32 ", cmd_stream_ptr=%p", qbase, cms_length, cmd_stream_ptr);
@@ -173,7 +180,8 @@ void ethosu_dev_run_command_stream(struct ethosu_device *dev,
 #ifdef ETHOSU65
     dev->reg->QBASE.word[1] = qbase >> 32;
 #endif
-    dev->reg->QSIZE.word = cms_length;
+    dev->reg->QSIZE.word    = cms_length;
+    dev->reg->QCONFIG.word  = ethosu_config_select(qbase, -1);
 
     for (int i = 0; i < num_base_addr; i++)
     {
@@ -184,7 +192,10 @@ void ethosu_dev_run_command_stream(struct ethosu_device *dev,
 #ifdef ETHOSU65
         dev->reg->BASEP[i].word[1] = addr >> 32;
 #endif
+        rcfg.word |= ethosu_config_select(addr, i) << (i * 2);
     }
+
+    dev->reg->REGIONCFG.word = rcfg.word;
 
     cmd.word                        = dev->reg->CMD.word & NPU_CMD_PWR_CLK_MASK;
     cmd.transition_to_running_state = 1;
