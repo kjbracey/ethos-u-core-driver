@@ -1,3 +1,5 @@
+# THIS REPOSITORY HAS MOVED TO HERE: <https://gitlab.arm.com/artificial-intelligence/ethos-u/ethos-u-core-driver>. PLEASE UPDATE YOUR REFERENCES AS THIS REPO IS NOW DEPRECATED AND WILL NOT RECEIVE ANY FURTHER UPDATES.
+
 # Arm(R) Ethos(TM)-U core driver
 
 This repository contains a device driver for the Arm(R) Ethos(TM)-U NPU.
